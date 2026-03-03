@@ -1,64 +1,399 @@
-<h2>My Profile</h2>
+<%
+currentPage = 'profile';
+%>
 
-<div style="position:relative;" class="card">
+<!-- Success Message -->
+<% if (typeof message !== 'undefined' && message) { %>
+    <div class="alert success">
+        ✅ <%= message %>
+    </div>
+<% } %>
 
-  <p><strong>Name:</strong> <%= candidate.name || "Not Set" %></p>
-  <p><strong>Email:</strong> <%= user.email %></p>
-  <p><strong>Mobile:</strong> <%= candidate.mobile || "Not Set" %></p>
-  <p><strong>Experience:</strong> <%= candidate.experience || 0 %> years</p>
-  <p><strong>Personality Score:</strong> <%= candidate.personalityScore || 0 %></p>
-
+<div class="profile-header">
+    <h2>My Profile</h2>
+    <p class="text-secondary">Manage your personal information and resume</p>
 </div>
 
-<hr>
+<!-- Profile Information -->
+<div class="profile-card">
+    <div class="profile-section">
+        <h3>Personal Information</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">FULL NAME</span>
+                <span class="info-value"><%= candidate.name || "Not set" %></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">EMAIL</span>
+                <span class="info-value"><%= user.email %></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">MOBILE</span>
+                <span class="info-value"><%= candidate.mobile || "Not set" %></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">EXPERIENCE</span>
+                <span class="info-value"><%= candidate.experience || 0 %> years</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">PERSONALITY SCORE</span>
+                <span class="info-value"><%= candidate.personalityScore || 50 %></span>
+            </div>
+        </div>
+        
+        <!-- Edit Button - FIXED -->
+        <button class="btn-edit" onclick="openEditModal()">Edit Profile</button>
+    </div>
 
-<h3>Resume</h3>
+    <!-- Resume Section -->
+    <div class="profile-section">
+        <h3>Resume</h3>
+        
+        <% if (candidate.resume) { %>
+            <div class="resume-info">
+                <p>Current Resume:</p>
+                <a href="/uploads/<%= candidate.resume %>" target="_blank" class="resume-link">
+                    📄 View Resume
+                </a>
+            </div>
+        <% } else { %>
+            <p class="no-resume">No resume uploaded yet</p>
+        <% } %>
 
-<div class="card">
-
-  <% if (candidate.resume) { %>
-    <p>
-      Current Resume:
-      <a href="/uploads/<%= candidate.resume %>" target="_blank">
-        View Resume
-      </a>
-    </p>
-  <% } else { %>
-    <p>No resume uploaded.</p>
-  <% } %>
-
-  <form method="POST" action="/api/candidates/upload-resume" enctype="multipart/form-data">
-    <input type="file" name="resume" required>
-    <button type="submit">Upload / Re-upload Resume</button>
-  </form>
-
+        <form method="POST" action="/api/candidates/upload-resume" enctype="multipart/form-data" class="resume-form">
+            <div class="file-input-wrapper">
+                <input type="file" name="resume" id="resume" accept=".pdf,.doc,.docx">
+                <label for="resume" class="file-label">Choose File</label>
+                <span id="file-name" class="file-name">No file chosen</span>
+            </div>
+            <button type="submit" class="btn-upload">Upload Resume</button>
+        </form>
+    </div>
 </div>
 
-<!-- EDIT MODAL -->
-<div id="editModal" style="display:none; position:fixed; top:20%; left:35%; background:white; padding:20px; box-shadow:0 0 10px rgba(0,0,0,0.3);">
+<!-- Edit Modal -->
+<div id="editModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <h3>Edit Profile</h3>
+        <form method="POST" action="/candidate/profile/update">
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" name="name" value="<%= candidate.name || '' %>" required>
+            </div>
 
-<form method="POST" action="/candidate/profile/update">
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" name="email" value="<%= user.email %>" required>
+            </div>
 
-  <label>Name</label>
-  <input type="text" name="name" value="<%= candidate.name %>" required>
+            <div class="form-group">
+                <label>Mobile</label>
+                <input type="text" name="mobile" value="<%= candidate.mobile || '' %>">
+            </div>
 
-  <label>Email</label>
-  <input type="email" name="email" value="<%= user.email %>" required>
+            <div class="form-group">
+                <label>Experience (years)</label>
+                <input type="number" name="experience" value="<%= candidate.experience || 0 %>" required>
+            </div>
 
-  <label>Mobile</label>
-  <input type="text" name="mobile" value="<%= candidate.mobile || '' %>">
+            <div class="form-group">
+                <label>Personality Score</label>
+                <input type="number" name="personalityScore" value="<%= candidate.personalityScore || 50 %>" required>
+            </div>
 
-  <label>Experience</label>
-  <input type="number" name="experience" value="<%= candidate.experience %>" required>
-
-  <label>Personality Score</label>
-  <input type="number" name="personalityScore" value="<%= candidate.personalityScore %>" required>
-
-  <br><br>
-  <button type="submit">Save</button>
-  <button type="button" onclick="closeModal()">Cancel</button>
-
-</form>
-
+            <div class="modal-actions">
+                <button type="submit" class="btn-save">Save Changes</button>
+                <button type="button" class="btn-cancel" onclick="closeModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
 </div>
 
+<style>
+.profile-header {
+    margin-bottom: 30px;
+}
+
+.profile-header h2 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 8px;
+}
+
+.text-secondary {
+    color: #86868b;
+}
+
+.profile-card {
+    background: white;
+    border-radius: 24px;
+    border: 1px solid #e5e5e5;
+    overflow: hidden;
+}
+
+.profile-section {
+    padding: 30px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.profile-section:last-child {
+    border-bottom: none;
+}
+
+.profile-section h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 24px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.info-label {
+    font-size: 0.75rem;
+    color: #86868b;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.info-value {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #1d1d1f;
+}
+
+.btn-edit {
+    background: #f5f5f7;
+    border: 1px solid #d2d2d7;
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1d1d1f;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-edit:hover {
+    background: #e5e5e5;
+}
+
+/* Resume Section */
+.resume-info {
+    background: #f5f5f7;
+    padding: 16px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.resume-info p {
+    color: #86868b;
+}
+
+.resume-link {
+    color: #1d1d1f;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 6px 12px;
+    background: white;
+    border-radius: 10px;
+    border: 1px solid #d2d2d7;
+}
+
+.resume-link:hover {
+    background: #f5f5f7;
+}
+
+.no-resume {
+    color: #86868b;
+    font-style: italic;
+    margin-bottom: 20px;
+    padding: 16px;
+    background: #f5f5f7;
+    border-radius: 16px;
+}
+
+.resume-form {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.file-input-wrapper {
+    position: relative;
+    flex: 1;
+    min-width: 250px;
+}
+
+.file-input-wrapper input[type="file"] {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.file-label {
+    display: inline-block;
+    padding: 10px 20px;
+    background: #f5f5f7;
+    border: 1px solid #d2d2d7;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1d1d1f;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+.file-name {
+    color: #86868b;
+    font-size: 0.9rem;
+}
+
+.btn-upload {
+    background: #1d1d1f;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-upload:hover {
+    background: #2d2d2f;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 24px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-content h3 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 24px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #1d1d1f;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #d2d2d7;
+    border-radius: 12px;
+    font-size: 0.95rem;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.btn-save {
+    flex: 1;
+    padding: 12px;
+    background: #1d1d1f;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.btn-cancel {
+    flex: 1;
+    padding: 12px;
+    background: #f5f5f7;
+    color: #1d1d1f;
+    border: 1px solid #d2d2d7;
+    border-radius: 12px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.alert {
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.alert.success {
+    background: #e6f7e6;
+    color: #0e6245;
+    border-left: 4px solid #0e6245;
+}
+</style>
+
+<script>
+function openEditModal() {
+    document.getElementById('editModal').style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('editModal').style.display = 'none';
+}
+
+// Update file name when selected
+document.getElementById('resume')?.addEventListener('change', function(e) {
+    const fileName = e.target.files[0]?.name || 'No file chosen';
+    document.getElementById('file-name').textContent = fileName;
+});
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('editModal');
+    if (event.target === modal) {
+        closeModal();
+    }
+}
+</script>

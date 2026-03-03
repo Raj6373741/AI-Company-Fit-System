@@ -1,47 +1,289 @@
-<h2>Available Jobs</h2>
+<%
+currentPage = 'dashboard';
+%>
 
-<table>
-  <tr>
-    <th>Title</th>
-    <th>Experience</th>
-    <th>Skills</th>
-    <th>Action</th>
-  </tr>
+<% if (typeof applied !== 'undefined' && applied === 'success') { %>
+    <div class="alert success">✅ Application submitted successfully! Check your email.</div>
+<% } else if (typeof applied !== 'undefined' && applied === 'already') { %>
+    <div class="alert warning">⚠️ You have already applied for this job.</div>
+<% } %>
 
-  <% jobs.forEach(job => { %>
-    <tr>
-        <td><%= job.title %></td>
-        <td><%= job.minExperience %> years</td>
-        <td><%= job.requiredSkills.join(", ") %></td>
-        <td>
+<!-- Candidate Summary Card - Name fixed -->
+<% if (candidate) { %>
+<div class="candidate-summary">
+    <div class="summary-avatar">
+        <%= (candidate.name && candidate.name[0]) ? candidate.name[0].toUpperCase() : 'C' %>
+    </div>
+    <div class="summary-info">
+        <h3>Welcome back, <strong><%= candidate.name || 'Candidate' %></strong>!</h3>
+        <p class="summary-text">
+            Based on your profile, you have <strong><%= candidate.experience || 0 %> years</strong> experience 
+            and skills in <strong><%= candidate.skills && candidate.skills.length > 0 ? candidate.skills.slice(0,3).join(', ') : 'N/A' %></strong>.
+            Your AI Fit Score is <strong><%= candidate.personalityScore || 50 %></strong>.
+        </p>
+    </div>
+    <a href="/candidate/profile" class="summary-edit">Edit Profile →</a>
+</div>
+<% } %>
 
-            <% if (appliedJobs.includes(job._id.toString())) { %>
-            <button disabled style="
-                background:gray;
-                color:white;
-                border:none;
-                padding:6px 12px;
-                border-radius:4px;
-            ">
-                Applied
-            </button>
-            <% } else { %>
-            <form method="POST" action="/candidate/apply/<%= job._id %>">
-                <button type="submit" style="
-                background:#2563eb;
-                color:white;
-                border:none;
-                padding:6px 12px;
-                border-radius:4px;
-                cursor:pointer;
-                ">
-                Apply
-                </button>
-            </form>
-            <% } %>
+<div class="dashboard-header">
+    <h2>Available Jobs</h2>
+    <p class="text-secondary">Find the perfect role that matches your skills</p>
+</div>
 
-        </td>
-        </tr>
-  <% }) %>
+<!-- Jobs Grid -->
+<div class="jobs-container">
+    <% if (jobs.length === 0) { %>
+        <div class="empty-state">
+            <p>No jobs available at the moment. Check back later!</p>
+        </div>
+    <% } else { %>
+        <div class="job-grid">
+            <% jobs.forEach(job => { %>
+                <div class="job-card">
+                    <div class="job-header">
+                        <h4><%= job.title %></h4>
+                        <span class="job-status">Open</span>
+                    </div>
+                    
+                    <div class="job-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Experience:</span>
+                            <span class="detail-value"><%= job.minExperience %> years</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Skills:</span>
+                            <div class="skills-list">
+                                <% if (job.requiredSkills && job.requiredSkills.length > 0) { %>
+                                    <% job.requiredSkills.forEach(skill => { %>
+                                        <span class="skill-tag"><%= skill %></span>
+                                    <% }) %>
+                                <% } else { %>
+                                    <span class="skill-tag">No skills listed</span>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="job-footer">
+                        <% if (appliedJobs && appliedJobs.includes(job._id.toString())) { %>
+                            <button class="btn-applied" disabled>✓ Applied</button>
+                        <% } else { %>
+                            <form method="POST" action="/candidate/apply/<%= job._id %>">
+                                <button type="submit" class="btn-apply">Apply Now</button>
+                            </form>
+                        <% } %>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+    <% } %>
+</div>
 
-</table>
+<style>
+.candidate-summary {
+    background: white;
+    border-radius: 24px;
+    padding: 24px;
+    margin-bottom: 30px;
+    border: 1px solid #e5e5e5;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.summary-avatar {
+    width: 60px;
+    height: 60px;
+    background: #1d1d1f;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.summary-info {
+    flex: 1;
+}
+
+.summary-info h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 6px;
+}
+
+.summary-text {
+    color: #86868b;
+    line-height: 1.5;
+}
+
+.summary-text strong {
+    color: #1d1d1f;
+}
+
+.summary-edit {
+    color: #1d1d1f;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 8px 16px;
+    background: #f5f5f7;
+    border-radius: 12px;
+    transition: all 0.2s;
+}
+
+.summary-edit:hover {
+    background: #e5e5e5;
+}
+
+.dashboard-header {
+    margin-bottom: 30px;
+}
+
+.dashboard-header h2 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 8px;
+}
+
+.text-secondary {
+    color: #86868b;
+}
+
+.job-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+.job-card {
+    background: white;
+    border-radius: 20px;
+    padding: 20px;
+    border: 1px solid #e5e5e5;
+    transition: all 0.2s;
+}
+
+.job-card:hover {
+    box-shadow: 0 5px 20px rgba(0,0,0,0.03);
+    transform: translateY(-2px);
+}
+
+.job-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.job-header h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1d1d1f;
+}
+
+.job-status {
+    background: #e6f7e6;
+    color: #0e6245;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.job-details {
+    margin-bottom: 20px;
+}
+
+.detail-item {
+    margin-bottom: 12px;
+}
+
+.detail-label {
+    color: #86868b;
+    font-size: 0.85rem;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.detail-value {
+    color: #1d1d1f;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.skills-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.skill-tag {
+    background: #f5f5f7;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: #1d1d1f;
+}
+
+.job-footer {
+    margin-top: 15px;
+}
+
+.btn-apply, .btn-applied {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-apply {
+    background: #1d1d1f;
+    color: white;
+}
+
+.btn-apply:hover {
+    background: #2d2d2f;
+}
+
+.btn-applied {
+    background: #e6f7e6;
+    color: #0e6245;
+}
+
+.alert {
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.alert.success {
+    background: #e6f7e6;
+    color: #0e6245;
+    border-left: 4px solid #0e6245;
+}
+
+.alert.warning {
+    background: #fff3e0;
+    color: #b45309;
+    border-left: 4px solid #b45309;
+}
+
+.empty-state {
+    background: white;
+    border-radius: 20px;
+    padding: 60px 20px;
+    text-align: center;
+    color: #86868b;
+    border: 1px dashed #d2d2d7;
+}
+</style>

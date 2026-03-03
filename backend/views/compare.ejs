@@ -1,100 +1,298 @@
-<h2>Candidate Comparison</h2>
+<%
+// Set current page
+currentPage = 'dashboard';
 
-<table border="1" cellpadding="10" width="100%">
-  <tr style="background:#f5f5f5;">
-    <th>Metric</th>
-    <th><%= c1.candidate.name %></th>
-    <th><%= c2.candidate.name %></th>
-  </tr>
+// Determine winner
+const c1Winner = winner && c1 && winner._id && c1._id && winner._id.toString() === c1._id.toString();
+const c2Winner = winner && c2 && winner._id && c2._id && winner._id.toString() === c2._id.toString();
+const jobId = c1?.job || c2?.job;
+%>
 
-  <tr>
-    <td>Final Score</td>
-    <td><%= c1.evaluation.finalScore %></td>
-    <td><%= c2.evaluation.finalScore %></td>
-  </tr>
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
-  <tr>
-    <td>Skill Score</td>
-    <td><%= c1.evaluation.skillScore %></td>
-    <td><%= c2.evaluation.skillScore %></td>
-  </tr>
-
-  <tr>
-    <td>Experience Score</td>
-    <td><%= c1.evaluation.experienceScore %></td>
-    <td><%= c2.evaluation.experienceScore %></td>
-  </tr>
-
-  <tr>
-    <td>Personality Score</td>
-    <td><%= c1.evaluation.personalityScore %></td>
-    <td><%= c2.evaluation.personalityScore %></td>
-  </tr>
-
-  <tr>
-    <td>Confidence Index</td>
-    <td><%= c1.evaluation.confidenceIndex %></td>
-    <td><%= c2.evaluation.confidenceIndex %></td>
-  </tr>
-</table>
-
-<br>
-
-<h3>🏆 AI Recommendation</h3>
-
-<div style="padding:10px; background:#e6f4ea; border-left:5px solid green;">
-  <strong><%= winner.candidate.name %></strong>
-  (Score: <%= winner.evaluation.finalScore %>)
-  <br>
-  <small><%= winner.evaluation.explanation %></small>
+<div class="compare-header">
+    <h2>Candidate Comparison</h2>
+    <a href="<%= jobId ? `/hr/job/${jobId}/applicants` : '/hr/dashboard' %>" class="back-link">← Back to Applicants</a>
 </div>
 
-<hr>
+<!-- Comparison Grid -->
+<div class="compare-grid">
+    <!-- Candidate 1 -->
+    <div class="compare-card <%= c1Winner ? 'winner' : '' %>">
+        <div class="card-header">
+            <h3><%= c1?.candidateName || 'Candidate 1' %></h3>
+            <% if (c1Winner) { %>
+                <span class="winner-badge">AI Recommended</span>
+            <% } %>
+        </div>
+        
+        <div class="scores">
+            <div class="score-item">
+                <span class="score-label">Final Score</span>
+                <span class="score-value large"><%= c1?.evaluation?.finalScore || 0 %></span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">Skill Score</span>
+                <span class="score-value"><%= c1?.evaluation?.skillScore || 0 %></span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">Experience</span>
+                <span class="score-value"><%= c1?.evaluation?.experienceScore || 0 %></span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">Personality</span>
+                <span class="score-value"><%= c1?.evaluation?.personalityScore || 0 %></span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">Confidence</span>
+                <span class="score-value"><%= c1?.evaluation?.confidenceIndex || 0 %></span>
+            </div>
+        </div>
+    </div>
 
-<h3>Performance Comparison Chart</h3>
+    <!-- Candidate 2 -->
+    <div class="compare-card <%= c2Winner ? 'winner' : '' %>">
+        <div class="card-header">
+            <h3><%= c2?.candidateName || 'Candidate 2' %></h3>
+            <% if (c2Winner) { %>
+                <span class="winner-badge">AI Recommended</span>
+            <% } %>
+        </div>
+        
+        <div class="scores">
+            <div class="score-item">
+                <span class="score-label">Final Score</span>
+                <span class="score-value large"><%= c2?.evaluation?.finalScore || 0 %></span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">Skill Score</span>
+                <span class="score-value"><%= c2?.evaluation?.skillScore || 0 %></span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">Experience</span>
+                <span class="score-value"><%= c2?.evaluation?.experienceScore || 0 %></span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">Personality</span>
+                <span class="score-value"><%= c2?.evaluation?.personalityScore || 0 %></span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">Confidence</span>
+                <span class="score-value"><%= c2?.evaluation?.confidenceIndex || 0 %></span>
+            </div>
+        </div>
+    </div>
+</div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Recommendation -->
+<% if (winner) { %>
+    <div class="recommendation">
+        <strong>AI Recommendation:</strong> 
+        <%= winner.candidateName || 'Selected Candidate' %> 
+        (Score: <%= winner.evaluation?.finalScore || 0 %>)
+        <span class="note">Needs improvement in required skills.</span>
+    </div>
+<% } %>
 
-<canvas id="compareChart" height="100"></canvas>
+<!-- Chart -->
+<div class="chart-container">
+    <h3>Performance Comparison</h3>
+    <div class="chart-wrapper">
+        <canvas id="compareChart"></canvas>
+    </div>
+</div>
+
+<style>
+.compare-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.compare-header h2 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #1d1d1f;
+}
+
+.back-link {
+    color: #1d1d1f;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 8px 16px;
+    background: #f5f5f7;
+    border-radius: 12px;
+    transition: all 0.2s;
+}
+
+.back-link:hover {
+    background: #e5e5e5;
+}
+
+.compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 30px;
+}
+
+.compare-card {
+    background: white;
+    border-radius: 24px;
+    padding: 24px;
+    border: 2px solid #e5e5e5;
+    transition: all 0.2s;
+}
+
+.compare-card.winner {
+    border-color: #10b981;
+    background: #f0fdf4;
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.card-header h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #1d1d1f;
+}
+
+.winner-badge {
+    background: #10b981;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.scores {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.score-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f5f5f7;
+}
+
+.score-item:last-child {
+    border-bottom: none;
+}
+
+.score-label {
+    color: #86868b;
+    font-size: 0.95rem;
+}
+
+.score-value {
+    font-weight: 600;
+    color: #1d1d1f;
+    font-size: 1.1rem;
+}
+
+.score-value.large {
+    font-size: 1.5rem;
+    color: #1d1d1f;
+}
+
+.recommendation {
+    background: #fef9e7;
+    border-left: 4px solid #f59e0b;
+    padding: 16px 20px;
+    border-radius: 16px;
+    margin-bottom: 30px;
+    color: #92400e;
+}
+
+.recommendation .note {
+    display: block;
+    margin-top: 8px;
+    color: #b45309;
+    font-size: 0.9rem;
+}
+
+.chart-container {
+    background: white;
+    border-radius: 24px;
+    padding: 24px;
+    border: 1px solid #e5e5e5;
+}
+
+.chart-container h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 20px;
+}
+
+.chart-wrapper {
+    position: relative;
+    height: 350px;
+    width: 100%;
+}
+</style>
 
 <script>
-const ctx = document.getElementById('compareChart');
-
-new Chart(ctx, {
-  type: 'bar',
-  data: {
-    labels: ['Skill', 'Experience', 'Personality', 'Final Score'],
-    datasets: [
-      {
-        label: "<%= c1.candidate.name %>",
-        data: [
-          <%= c1.evaluation.skillScore %>,
-          <%= c1.evaluation.experienceScore %>,
-          <%= c1.evaluation.personalityScore %>,
-          <%= c1.evaluation.finalScore %>
-        ],
-        backgroundColor: 'rgba(54, 162, 235, 0.7)'
-      },
-      {
-        label: "<%= c2.candidate.name %>",
-        data: [
-          <%= c2.evaluation.skillScore %>,
-          <%= c2.evaluation.experienceScore %>,
-          <%= c2.evaluation.personalityScore %>,
-          <%= c2.evaluation.finalScore %>
-        ],
-        backgroundColor: 'rgba(255, 99, 132, 0.7)'
-      }
-    ]
-  },
-  options: {
-    responsive: true,
-    scales: {
-      y: {
-        beginAtZero: true,
-        max: 100
-      }
-    }
-  }
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('compareChart').getContext('2d');
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Skill', 'Experience', 'Personality', 'Confidence'],
+            datasets: [
+                {
+                    label: '<%= c1?.candidateName || "Candidate 1" %>',
+                    data: [
+                        <%= c1?.evaluation?.skillScore || 0 %>,
+                        <%= c1?.evaluation?.experienceScore || 0 %>,
+                        <%= c1?.evaluation?.personalityScore || 0 %>,
+                        <%= c1?.evaluation?.confidenceIndex || 0 %>
+                    ],
+                    backgroundColor: '#3b82f6',
+                    borderRadius: 8
+                },
+                {
+                    label: '<%= c2?.candidateName || "Candidate 2" %>',
+                    data: [
+                        <%= c2?.evaluation?.skillScore || 0 %>,
+                        <%= c2?.evaluation?.experienceScore || 0 %>,
+                        <%= c2?.evaluation?.personalityScore || 0 %>,
+                        <%= c2?.evaluation?.confidenceIndex || 0 %>
+                    ],
+                    backgroundColor: '#ef4444',
+                    borderRadius: 8
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    grid: { color: '#f5f5f7' }
+                }
+            }
+        }
+    });
 });
 </script>

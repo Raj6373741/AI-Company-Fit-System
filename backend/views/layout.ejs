@@ -3,46 +3,66 @@
 <head>
     <title><%= typeof title !== "undefined" ? title : "AI Fit Index" %></title>
     <link rel="stylesheet" href="/css/style.css">
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'self'; 
+                   script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; 
+                   style-src 'self' 'unsafe-inline';">
 </head>
 <body>
+    <div class="app-wrapper">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>AI Fit Index</h2>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <% if (user?.role === "hr") { %>
+                    <a href="/hr/dashboard" class="nav-item <%= currentPage === 'dashboard' ? 'active' : '' %>">
+                        <span class="nav-icon">📊</span>
+                        Dashboard
+                    </a>
+                    <a href="/hr/logins" class="nav-item <%= currentPage === 'logs' ? 'active' : '' %>">
+                        <span class="nav-icon">📋</span>
+                        Login Logs
+                    </a>
+                    <a href="/logout" class="nav-item logout">
+                        <span class="nav-icon">🚪</span>
+                        Logout
+                    </a>
+                <% } else if (user?.role === "candidate") { %>
+                    <a href="/candidate/dashboard" class="nav-item <%= currentPage === 'dashboard' ? 'active' : '' %>">
+                        <span class="nav-icon">📊</span>
+                        Dashboard
+                    </a>
+                    <a href="/candidate/profile" class="nav-item <%= currentPage === 'profile' ? 'active' : '' %>">
+                        <span class="nav-icon">👤</span>
+                        My Profile
+                    </a>
+                    <a href="/logout" class="nav-item logout">
+                        <span class="nav-icon">🚪</span>
+                        Logout
+                    </a>
+                <% } %>
+            </nav>
+        </aside>
 
-<div class="wrapper">
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="page-title">
+                    <h1><%= typeof title !== "undefined" ? title : "Dashboard" %></h1>
+                </div>
+                <div class="user-info">
+                    <span class="user-role"><%= user?.role === 'hr' ? 'HR' : 'Candidate' %></span>
+                    <span class="user-name"><%= user?.name || '' %></span>
+                </div>
+            </header>
 
-    <aside class="sidebar">
-    <h2>AI Fit Index</h2>
-
-    <% if (user?.role === "hr") { %>
-
-        <ul>
-            <li><a href="/hr/dashboard">Dashboard</a></li>
-            <li><a href="/hr/logins">Login Logs</a></li>
-            <li><a href="/logout">Logout</a></li>
-        </ul>
-
-    <% } else if (user?.role === "candidate") { %>
-
-        <ul>
-            <li><a href="/candidate/dashboard">Dashboard</a></li>
-            <li><a href="/candidate/profile">My Profile</a></li>
-            <li><a href="/logout">Logout</a></li>
-        </ul>
-
-    <% } %>
-</aside>
-
-    <div class="main-content">
-
-        <header class="topbar">
-            <span>Welcome, <%= user?.role %></span>
-        </header>
-
-        <div class="content">
-            <%- body %>
-        </div>
-
+            <div class="content-area">
+                <%- body %>
+            </div>
+        </main>
     </div>
-
-</div>
-
 </body>
 </html>

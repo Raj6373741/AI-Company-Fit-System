@@ -10,6 +10,7 @@ const LoginLog = require("./models/LoginLog");
 const { requireLogin, requireRole } = require("./middleware/sessionAuth");
 const Candidate = require("./models/Candidate");
 const { calculateFitScore } = require("./services/fitService");
+const { sendApplicationConfirmation, sendHRNotification } = require('./services/emailService');
 const Job = require("./models/Job");
 const expressLayouts = require("express-ejs-layouts");
 const app = express();
@@ -26,7 +27,11 @@ connectDB();
 // --------------------
 // SECURITY MIDDLEWARE
 // --------------------
-app.use(helmet());
+// HELMET CONFIG - Allow CDN and inline scripts
+// SECURITY MIDDLEWARE - Updated CSP
+app.use(helmet({
+    contentSecurityPolicy: false,
+}));
 
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -78,6 +83,8 @@ app.use((req, res, next) => {
 // --------------------
 // ROOT ROUTE (AUTO REDIRECT)
 // --------------------
+// ROOT ROUTE (AUTO REDIRECT)
+// ROOT ROUTE (AUTO REDIRECT)
 app.get("/", (req, res) => {
   if (req.session.user) {
     if (req.session.user.role === "hr") {
@@ -88,9 +95,13 @@ app.get("/", (req, res) => {
     }
   }
 
+  // Get tab from query parameter
+  const tab = req.query.tab || 'login';
+
   res.render("login", {
     layout: false,
-    title: "Login"
+    title: "Login",
+    tab: tab  // Pass tab to template
   });
 });
 
@@ -126,18 +137,88 @@ app.get("/hr/logins",
     });
 });
 
+// HR DASHBOARD with analytics
+// HR DASHBOARD with charts data
 app.get("/hr/dashboard",
   requireLogin,
   requireRole("hr"),
   async (req, res) => {
 
     try {
+      // Get all jobs
       const jobs = await Job.find({});
+      
+      // Get total candidates
+      const totalCandidates = await Candidate.countDocuments();
+      
+      // Get total applications
+      const totalApplications = await Application.countDocuments();
+      
+      // Get jobs with application counts
+      const jobsWithCounts = await Promise.all(
+        jobs.map(async (job) => {
+          const count = await Application.countDocuments({ job: job._id });
+          return {
+            ...job.toObject(),
+            applicationCount: count
+          };
+        })
+      );
+      
+      // ===== HIRING TRENDS DATA (Last 12 months) =====
+      const now = new Date();
+      const months = [];
+      const applicationCounts = [];
+      
+      // Month names
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      
+      // Get last 12 months data
+      for (let i = 11; i >= 0; i--) {
+        const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const nextMonth = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+        
+        // Count applications in this month
+        const count = await Application.countDocuments({
+          createdAt: { $gte: month, $lt: nextMonth }
+        });
+        
+        months.push(monthNames[month.getMonth()]);
+        applicationCounts.push(count);
+      }
+      
+      // ===== TOP JOBS DATA =====
+      const topJobs = jobsWithCounts
+        .sort((a, b) => b.applicationCount - a.applicationCount)
+        .slice(0, 5)
+        .map(job => ({
+          title: job.title,
+          count: job.applicationCount
+        }));
+      
+      // Get query parameter
+      const created = req.query.created || null;
+
+      console.log("Months:", months);
+      console.log("Application Counts:", applicationCounts);
+      console.log("Top Jobs:", topJobs);
+
       res.render("hr-dashboard", {
         title: "HR Dashboard",
-        jobs
+        jobs: jobsWithCounts,
+        totalJobs: jobs.length,
+        totalCandidates,
+        totalApplications,
+        activeJobs: jobs.filter(j => j.status !== 'closed').length,
+        months: JSON.stringify(months),
+        applicationCounts: JSON.stringify(applicationCounts),
+        topJobs: JSON.stringify(topJobs),
+        created
       });
+      
     } catch (error) {
+      console.error("Dashboard error:", error);
       res.status(500).send("Error loading dashboard");
     }
   }
@@ -196,7 +277,7 @@ app.post("/hr/job/create",
         status: "open"
       });
 
-      res.redirect("/hr/dashboard");
+      res.redirect("/hr/dashboard?created=success");  // 👈 YEH CHANGE KARO
 
     } catch (error) {
       res.status(500).send("Error creating job");
@@ -204,50 +285,75 @@ app.post("/hr/job/create",
   }
 );
 
-app.get("/hr/job/:id/view", requireLogin, requireRole("hr"), async (req, res) => {
+// COMPARE ROUTE - POST
+// COMPARE ROUTE - POST (for form submission)
+// COMPARE ROUTE - POST
 
-  const job = await Job.findById(req.params.id);
+app.post("/hr/compare/:jobId",
+  requireLogin,
+  requireRole("hr"),
+  async (req, res) => {
 
-  const applications = await Application.find({
-    job: req.params.id
-  }).sort({ "evaluation.finalScore": -1 });
+    try {
 
-  res.render("job-detail", {
-    title: "Applicants",
-    job,
-    applications
-  });
-});
+      // 🔥 Always normalize to array
+      const selected = [].concat(req.body.applications || []);
 
-app.post("/hr/compare/:jobId", requireLogin, requireRole("hr"), async (req, res) => {
+      console.log("Raw body:", req.body);
+      console.log("Selected after normalize:", selected);
 
-  const selected = req.body.candidates;
+      // ❌ No selection
+      if (selected.length === 0) {
+        return res.send("No candidates selected");
+      }
 
-  if (!selected || selected.length !== 2) {
-    return res.send("Please select exactly 2 candidates.");
-  }
+      // ❌ Not exactly 2
+      if (selected.length !== 2) {
+        return res.send("Please select exactly 2 candidates");
+      }
 
-  const applications = await Application.find({
-    job: req.params.jobId,
-    candidate: { $in: selected }
-  });
+      // ✅ Validate ObjectIds
+      const validIds = selected.filter(id =>
+        mongoose.Types.ObjectId.isValid(id)
+      );
 
-  if (applications.length !== 2) {
-    return res.send("Comparison data not found.");
-  }
+      if (validIds.length !== 2) {
+        return res.send("Invalid candidate IDs");
+      }
 
-  const c1 = applications[0];
-  const c2 = applications[1];
+      const objectIds = validIds.map(id =>
+        new mongoose.Types.ObjectId(id)
+      );
 
-  const winner =
-    c1.evaluation.finalScore >= c2.evaluation.finalScore ? c1 : c2;
+      // ✅ Fetch Applications
+      const applications = await Application.find({
+        _id: { $in: objectIds }
+      }).populate("candidate");
 
-  res.render("compare", {
-    title: "Compare",
-    c1,
-    c2,
-    winner
-  });
+      console.log("Found Applications:", applications.length);
+
+      if (applications.length !== 2) {
+        return res.send("Applications not found");
+      }
+
+      const [c1, c2] = applications;
+
+      const score1 = c1.evaluation?.finalScore || 0;
+      const score2 = c2.evaluation?.finalScore || 0;
+
+      const winner = score1 >= score2 ? c1 : c2;
+
+      res.render("compare", {
+        title: "Compare Candidates",
+        c1,
+        c2,
+        winner
+      });
+
+    } catch (error) {
+      console.error("Compare error:", error);
+      res.status(500).send("Error: " + error.message);
+    }
 });
 
 app.get("/hr/job/:id",
@@ -273,36 +379,37 @@ app.get("/hr/job/:id",
     }
 });
 
+// HR JOB DETAILS PAGE - Applicants sorted by score
 app.get("/hr/job/:id/applicants",
   requireLogin,
   requireRole("hr"),
   async (req, res) => {
-
     try {
-      const job = await Job.findById(req.params.id);
 
+      const jobId = req.params.id;
+
+      const job = await Job.findById(jobId);
       if (!job) {
         return res.redirect("/hr/dashboard");
       }
 
+      // ✅ Fetch only valid applications
       const applications = await Application.find({
-        job: req.params.id
-      }).populate("candidate");
-
-      // REMOVE BROKEN REFERENCES HERE
-      const validApplications = applications.filter(
-        app => app.candidate !== null
-      );
+        job: jobId,
+        candidateName: { $exists: true, $ne: null }
+      })
+      .populate("candidate")
+      .sort({ "evaluation.finalScore": -1 });
 
       res.render("job-detail", {
         title: "Applicants",
         job,
-        applications: validApplications
+        applications
       });
 
     } catch (error) {
-      console.log(error);
-      res.redirect("/hr/dashboard");
+      console.error("Applicants Route Error:", error);
+      res.status(500).send("Something went wrong while loading applicants.");
     }
 });
 
@@ -327,10 +434,12 @@ app.get("/hr/job/:id/close",
 // --------------------
 // CANDIDATE DASHBOARD
 // --------------------
+// CANDIDATE DASHBOARD
 app.get("/candidate/dashboard", requireLogin, requireRole("candidate"), async (req, res) => {
 
   const jobs = await Job.find({ status: { $regex: /^open$/i } });
 
+  // 👇 IMPORTANT: candidate find karo
   const candidate = await Candidate.findOne({
     userId: new mongoose.Types.ObjectId(req.session.user.id)
   });
@@ -345,53 +454,95 @@ app.get("/candidate/dashboard", requireLogin, requireRole("candidate"), async (r
     appliedJobs = applications.map(app => app.job.toString());
   }
 
+  // Get query parameters
+  const applied = req.query.applied || null;
+
+  console.log("Candidate data:", candidate); // Debug
+
   res.render("candidate-dashboard", {
     jobs,
-    appliedJobs
+    appliedJobs,
+    applied,
+    candidate: candidate || { name: 'Candidate', skills: [], experience: 0, personalityScore: 50 }, // 👈 FIX: candidate pass karo
+    user: req.session.user
   });
 
 });
 
-app.post("/candidate/apply/:jobId", requireLogin, requireRole("candidate"), async (req, res) => {
+app.post("/candidate/apply/:jobId",
+  requireLogin,
+  requireRole("candidate"),
+  async (req, res) => {
 
-  const jobId = req.params.jobId;
+    try {
 
-  const candidate = await Candidate.findOne({
-    userId: new mongoose.Types.ObjectId(req.session.user.id)
-  });
+      const jobId = req.params.jobId;
 
-  const job = await Job.findById(jobId);
+      const candidate = await Candidate.findOne({
+        userId: new mongoose.Types.ObjectId(req.session.user.id)
+      });
 
-  if (!candidate || !job) {
-    return res.redirect("/candidate/dashboard");
-  }
+      const job = await Job.findById(jobId);
+      const user = await User.findById(req.session.user.id);
 
-  //  Prevent duplicate apply
-  const existing = await Application.findOne({
-    candidate: candidate._id,
-    job: jobId
-  });
+      if (!candidate || !job || !user) {
+        return res.redirect("/candidate/dashboard");
+      }
 
-  if (existing) {
-    return res.redirect("/candidate/dashboard?applied=already");
-  }
+      // 🔍 Debug
+      console.log("Candidate Name:", candidate.name);
+      console.log("User Email:", user.email);
 
-  const evaluation = calculateFitScore(candidate, job);
+      // Prevent duplicate apply
+      const existing = await Application.findOne({
+        candidate: candidate._id,
+        job: jobId
+      });
 
-  await Application.create({
-  candidate: candidate._id,
-  job: jobId,
+      if (existing) {
+        return res.redirect("/candidate/dashboard?applied=already");
+      }
 
-  // 🔥 Snapshot stored
-  candidateName: candidate.name,
-  candidateSkills: candidate.skills,
-  candidateExperience: candidate.experience,
-  candidatePersonality: candidate.personalityScore,
+      const evaluation = calculateFitScore(candidate, job);
 
-  evaluation
-});
+      // ✅ SAFE SNAPSHOT SAVE
+      await Application.create({
+        candidate: candidate._id,
+        job: jobId,
 
-  res.redirect("/candidate/dashboard?applied=success");
+        // ✅ Always real data save karo
+        candidateName: candidate.name,
+        candidateEmail: user.email,
+        candidateSkills: candidate.skills,
+        candidateExperience: candidate.experience,
+        candidatePersonality: candidate.personalityScore,
+        jobTitle: job.title,
+
+        evaluation
+      });
+
+      // 📧 Send email to candidate
+      if (user.email) {
+        sendApplicationConfirmation(user.email, candidate.name, job.title)
+          .catch(err => console.error("Candidate email error:", err));
+      }
+
+      // 📧 Send email to HR
+      const hrUsers = await User.find({ role: "hr" });
+
+      for (const hr of hrUsers) {
+        if (hr.email) {
+          sendHRNotification(hr.email, candidate.name, job.title)
+            .catch(err => console.error("HR email error:", err));
+        }
+      }
+
+      res.redirect("/candidate/dashboard?applied=success");
+
+    } catch (error) {
+      console.error("Apply Route Error:", error);
+      res.status(500).send("Something went wrong while applying.");
+    }
 });
 
 app.get("/candidate/profile",
@@ -414,23 +565,40 @@ app.get("/candidate/profile",
   });
 });
 
-app.post("/candidate/profile/update", requireLogin, requireRole("candidate"), async (req, res) => {
+// Update candidate profile
+app.post("/candidate/profile/update",
+  requireLogin,
+  requireRole("candidate"),
+  async (req, res) => {
 
-  const { name, email, mobile, experience, personalityScore } = req.body;
+    try {
 
-  await Candidate.findOneAndUpdate(
-    { userId: req.session.user.id },
-    { name, mobile, experience, personalityScore }
-  );
+      const { name, email, mobile, experience } = req.body;
 
-  await User.findByIdAndUpdate(
-    req.session.user.id,
-    { email }
-  );
+      const userId = req.session.user.id;
 
-  req.session.user.email = email;
+      // 🔥 1️⃣ Update USER model (name + email)
+      await User.findByIdAndUpdate(userId, {
+        name: name,
+        email: email
+      });
 
-  res.redirect("/candidate/profile");
+      // 🔥 2️⃣ Update CANDIDATE model (mobile + experience + name sync)
+      await Candidate.findOneAndUpdate(
+        { userId: userId },
+        {
+          name: name,              // keep name synced
+          mobile: mobile,
+          experience: experience
+        }
+      );
+
+      res.redirect("/candidate/profile");
+
+    } catch (error) {
+      console.error("Profile Update Error:", error);
+      res.status(500).send("Profile update failed");
+    }
 });
 
 // --------------------
