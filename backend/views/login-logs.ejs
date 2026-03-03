@@ -1,0 +1,19 @@
+<h2>Login Activity Logs</h2>
+
+<table>
+  <tr>
+    <th>Email</th>
+    <th>Role</th>
+    <th>IP Address</th>
+    <th>Login Time</th>
+  </tr>
+
+  <% logs.forEach(log => { %>
+    <tr>
+      <td><%= log.email %></td>
+      <td><%= log.role %></td>
+      <td><%= log.ipAddress %></td>
+      <td><%= log.loginTime.toLocaleString() %></td>
+    </tr>
+  <% }) %>
+</table>

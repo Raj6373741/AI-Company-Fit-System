@@ -1,0 +1,47 @@
+<h2>Available Jobs</h2>
+
+<table>
+  <tr>
+    <th>Title</th>
+    <th>Experience</th>
+    <th>Skills</th>
+    <th>Action</th>
+  </tr>
+
+  <% jobs.forEach(job => { %>
+    <tr>
+        <td><%= job.title %></td>
+        <td><%= job.minExperience %> years</td>
+        <td><%= job.requiredSkills.join(", ") %></td>
+        <td>
+
+            <% if (appliedJobs.includes(job._id.toString())) { %>
+            <button disabled style="
+                background:gray;
+                color:white;
+                border:none;
+                padding:6px 12px;
+                border-radius:4px;
+            ">
+                Applied
+            </button>
+            <% } else { %>
+            <form method="POST" action="/candidate/apply/<%= job._id %>">
+                <button type="submit" style="
+                background:#2563eb;
+                color:white;
+                border:none;
+                padding:6px 12px;
+                border-radius:4px;
+                cursor:pointer;
+                ">
+                Apply
+                </button>
+            </form>
+            <% } %>
+
+        </td>
+        </tr>
+  <% }) %>
+
+</table>

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Candidate Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<h1>Candidate Dashboard</h1>
+
+<div class="card">
+  <h3>Upload Resume</h3>
+  <input type="file" id="resumeFile">
+  <button onclick="uploadResume()">Upload</button>
+</div>
+
+<div class="card">
+  <h3>Extracted Skills</h3>
+  <p id="skills"></p>
+</div>
+
+<div class="card">
+  <h3>Apply to Job</h3>
+  <button onclick="applyJob()">Apply Now</button>
+
+  <div id="resultBox" style="margin-top:20px;"></div>
+</div>
+
+<script src="js/candidate.js"></script>
+</body>
+</html>

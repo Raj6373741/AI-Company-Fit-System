@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>HR Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<h1>HR Dashboard</h1>
+
+<!-- 🔥 Stats Section -->
+<div class="stats">
+  <div class="card">
+    <h3>Total Applications</h3>
+    <p id="total">0</p>
+  </div>
+
+  <div class="card">
+    <h3>Average Score</h3>
+    <p id="avg">0</p>
+  </div>
+
+  <div class="card">
+    <h3>Highest Score</h3>
+    <p id="high">0</p>
+  </div>
+</div>
+
+<!-- 🔥 Top Candidate -->
+<h2>Top Candidate</h2>
+<div class="card" id="topCandidate"></div>
+
+<!-- 🔥 Charts Section -->
+<h2>Fit Score Chart</h2>
+<canvas id="scoreChart"></canvas>
+
+<h2>Skill Frequency Chart</h2>
+<canvas id="skillChart"></canvas>
+
+<!-- 🔥 Ranking Table -->
+<h2>Candidate Ranking</h2>
+
+<div class="card" style="margin-bottom:20px;">
+  <label>Minimum Score Filter:</label>
+  <input type="number" id="minScore" placeholder="Enter score (e.g. 70)">
+  <button onclick="loadRanking()">Apply Filter</button>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Fit Score</th>
+      <th>Confidence</th>
+      <th>Skills</th>
+      <th>Status</th>
+      <th>Resume</th>
+    </tr>
+  </thead>
+  <tbody id="rankingTable"></tbody>
+</table>

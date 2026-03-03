@@ -1,0 +1,100 @@
+<h2>Candidate Comparison</h2>
+
+<table border="1" cellpadding="10" width="100%">
+  <tr style="background:#f5f5f5;">
+    <th>Metric</th>
+    <th><%= c1.candidate.name %></th>
+    <th><%= c2.candidate.name %></th>
+  </tr>
+
+  <tr>
+    <td>Final Score</td>
+    <td><%= c1.evaluation.finalScore %></td>
+    <td><%= c2.evaluation.finalScore %></td>
+  </tr>
+
+  <tr>
+    <td>Skill Score</td>
+    <td><%= c1.evaluation.skillScore %></td>
+    <td><%= c2.evaluation.skillScore %></td>
+  </tr>
+
+  <tr>
+    <td>Experience Score</td>
+    <td><%= c1.evaluation.experienceScore %></td>
+    <td><%= c2.evaluation.experienceScore %></td>
+  </tr>
+
+  <tr>
+    <td>Personality Score</td>
+    <td><%= c1.evaluation.personalityScore %></td>
+    <td><%= c2.evaluation.personalityScore %></td>
+  </tr>
+
+  <tr>
+    <td>Confidence Index</td>
+    <td><%= c1.evaluation.confidenceIndex %></td>
+    <td><%= c2.evaluation.confidenceIndex %></td>
+  </tr>
+</table>
+
+<br>
+
+<h3>🏆 AI Recommendation</h3>
+
+<div style="padding:10px; background:#e6f4ea; border-left:5px solid green;">
+  <strong><%= winner.candidate.name %></strong>
+  (Score: <%= winner.evaluation.finalScore %>)
+  <br>
+  <small><%= winner.evaluation.explanation %></small>
+</div>
+
+<hr>
+
+<h3>Performance Comparison Chart</h3>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<canvas id="compareChart" height="100"></canvas>
+
+<script>
+const ctx = document.getElementById('compareChart');
+
+new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: ['Skill', 'Experience', 'Personality', 'Final Score'],
+    datasets: [
+      {
+        label: "<%= c1.candidate.name %>",
+        data: [
+          <%= c1.evaluation.skillScore %>,
+          <%= c1.evaluation.experienceScore %>,
+          <%= c1.evaluation.personalityScore %>,
+          <%= c1.evaluation.finalScore %>
+        ],
+        backgroundColor: 'rgba(54, 162, 235, 0.7)'
+      },
+      {
+        label: "<%= c2.candidate.name %>",
+        data: [
+          <%= c2.evaluation.skillScore %>,
+          <%= c2.evaluation.experienceScore %>,
+          <%= c2.evaluation.personalityScore %>,
+          <%= c2.evaluation.finalScore %>
+        ],
+        backgroundColor: 'rgba(255, 99, 132, 0.7)'
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    scales: {
+      y: {
+        beginAtZero: true,
+        max: 100
+      }
+    }
+  }
+});
+</script>

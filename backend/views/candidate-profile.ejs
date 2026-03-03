@@ -1,0 +1,64 @@
+<h2>My Profile</h2>
+
+<div style="position:relative;" class="card">
+
+  <p><strong>Name:</strong> <%= candidate.name || "Not Set" %></p>
+  <p><strong>Email:</strong> <%= user.email %></p>
+  <p><strong>Mobile:</strong> <%= candidate.mobile || "Not Set" %></p>
+  <p><strong>Experience:</strong> <%= candidate.experience || 0 %> years</p>
+  <p><strong>Personality Score:</strong> <%= candidate.personalityScore || 0 %></p>
+
+</div>
+
+<hr>
+
+<h3>Resume</h3>
+
+<div class="card">
+
+  <% if (candidate.resume) { %>
+    <p>
+      Current Resume:
+      <a href="/uploads/<%= candidate.resume %>" target="_blank">
+        View Resume
+      </a>
+    </p>
+  <% } else { %>
+    <p>No resume uploaded.</p>
+  <% } %>
+
+  <form method="POST" action="/api/candidates/upload-resume" enctype="multipart/form-data">
+    <input type="file" name="resume" required>
+    <button type="submit">Upload / Re-upload Resume</button>
+  </form>
+
+</div>
+
+<!-- EDIT MODAL -->
+<div id="editModal" style="display:none; position:fixed; top:20%; left:35%; background:white; padding:20px; box-shadow:0 0 10px rgba(0,0,0,0.3);">
+
+<form method="POST" action="/candidate/profile/update">
+
+  <label>Name</label>
+  <input type="text" name="name" value="<%= candidate.name %>" required>
+
+  <label>Email</label>
+  <input type="email" name="email" value="<%= user.email %>" required>
+
+  <label>Mobile</label>
+  <input type="text" name="mobile" value="<%= candidate.mobile || '' %>">
+
+  <label>Experience</label>
+  <input type="number" name="experience" value="<%= candidate.experience %>" required>
+
+  <label>Personality Score</label>
+  <input type="number" name="personalityScore" value="<%= candidate.personalityScore %>" required>
+
+  <br><br>
+  <button type="submit">Save</button>
+  <button type="button" onclick="closeModal()">Cancel</button>
+
+</form>
+
+</div>
+

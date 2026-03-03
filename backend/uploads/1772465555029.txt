@@ -1,0 +1,6 @@
+Skills:
+JavaScript
+React
+HTML
+CSS
+MongoDB

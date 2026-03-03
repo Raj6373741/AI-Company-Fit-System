@@ -1,0 +1,37 @@
+<h2>HR Dashboard</h2>
+
+<div class="card">
+    <h3>Add New Job</h3>
+    <form method="POST" action="/hr/job/create">
+        <input type="text" name="title" placeholder="Job Title" required />
+        <input type="number" name="minExperience" placeholder="Min Experience" required />
+        <input type="text" name="skills" placeholder="Required Skills (comma separated)" required />
+        <button type="submit">Create Job</button>
+    </form>
+</div>
+
+<h3 style="margin-top:40px;">Job Listings</h3>
+
+<table>
+    <tr>
+        <th>Title</th>
+        <th>Status</th>
+        <th>Action</th>
+    </tr>
+
+    <% jobs.forEach(job => { %>
+        <tr>
+            <td><%= job.title %></td>
+            <td><%= job.status || "open" %></td>
+            <td>
+                <a href="/hr/job/<%= job._id %>/view">View</a>
+                |
+                <a href="/hr/job/<%= job._id %>/close">Close</a>
+                |
+                <a href="/hr/logins">View Login Logs</a>
+                |
+                <a href="/hr/job/<%= job._id %>/applicants">View Applicants</a>
+            </td>
+        </tr>
+    <% }) %>
+</table>

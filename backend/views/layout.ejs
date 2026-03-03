@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title><%= typeof title !== "undefined" ? title : "AI Fit Index" %></title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<div class="wrapper">
+
+    <aside class="sidebar">
+    <h2>AI Fit Index</h2>
+
+    <% if (user?.role === "hr") { %>
+
+        <ul>
+            <li><a href="/hr/dashboard">Dashboard</a></li>
+            <li><a href="/hr/logins">Login Logs</a></li>
+            <li><a href="/logout">Logout</a></li>
+        </ul>
+
+    <% } else if (user?.role === "candidate") { %>
+
+        <ul>
+            <li><a href="/candidate/dashboard">Dashboard</a></li>
+            <li><a href="/candidate/profile">My Profile</a></li>
+            <li><a href="/logout">Logout</a></li>
+        </ul>
+
+    <% } %>
+</aside>
+
+    <div class="main-content">
+
+        <header class="topbar">
+            <span>Welcome, <%= user?.role %></span>
+        </header>
+
+        <div class="content">
+            <%- body %>
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>
