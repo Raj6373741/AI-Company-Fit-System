@@ -1,52 +1,98 @@
 const { calculateSkillSimilarity } = require("./skillMatcher");
 
-exports.calculateFitScore = (candidate, job) => {
+exports.calculateFitScore = (candidate, job, resumeText = "") => {
 
-  const skillResult = calculateSkillSimilarity(
-    candidate.skills,
-    job.requiredSkills
+  console.log("Calculating fit score for:", {
+    candidateName: candidate.name,
+    candidateSkills: candidate.skills,
+    candidateExp: candidate.experience,
+    jobSkills: job.requiredSkills
+  });
+
+  // ---------- SAFE VALUES ----------
+  let candidateSkills = candidate.skills || [];
+  let jobSkills = job.requiredSkills || [];
+
+  const candidateExp = candidate.experience || 0;
+  const jobMinExp = job.minExperience || 0;
+  const candidatePersonality = candidate.personalityScore || 50;
+
+  // Convert skills to lowercase
+  candidateSkills = candidateSkills.map(s => s.toLowerCase());
+  jobSkills = jobSkills.map(s => s.toLowerCase());
+
+  // ---------- RESUME SKILL DETECTION ----------
+  const resumeSkills = jobSkills.filter(skill =>
+    resumeText.toLowerCase().includes(skill)
   );
 
-  const skillScore = skillResult.matchRatio * job.skillWeight;
+  // Merge candidate + resume skills
+  const combinedSkills = [...new Set([...candidateSkills, ...resumeSkills])];
 
-  const experienceRatio =
-    candidate.experience >= job.minExperience
-      ? 1
-      : candidate.experience / job.minExperience;
+  console.log("Candidate Skills:", candidateSkills);
+  console.log("Resume Skills:", resumeSkills);
+  console.log("Combined Skills:", combinedSkills);
+  console.log("Job Skills:", jobSkills);
 
-  const experienceScore =
-    experienceRatio * job.experienceWeight;
+  // ---------- SKILL MATCH ----------
+  const skillResult = calculateSkillSimilarity(
+    combinedSkills,
+    jobSkills
+  );
 
-  const personalityScore =
-    (candidate.personalityScore / 100) * job.personalityWeight;
+  // Weight configuration (fixed)
+  const skillWeight = 0.5;
+  const experienceWeight = 0.3;
+  const personalityWeight = 0.2;
 
-  const finalScore =
-    skillScore + experienceScore + personalityScore;
+  // Skill score (0–50)
+  const skillScore = (skillResult.matchRatio || 0) * 100 * skillWeight;
 
-  // 🔥 Confidence Index
-  const confidenceIndex =
-    (skillResult.matchRatio * 0.6) +
+  // Experience score (0–30)
+  const experienceRatio = candidateExp >= jobMinExp
+    ? 1
+    : candidateExp / (jobMinExp || 1);
+
+  const experienceScore = experienceRatio * 100 * experienceWeight;
+
+  // Personality score (0–20)
+  const personalityScore = (candidatePersonality / 100) * 100 * personalityWeight;
+
+  // Final Score (0–100)
+  const finalScore = skillScore + experienceScore + personalityScore;
+
+  // ---------- CONFIDENCE INDEX ----------
+  const confidenceIndex = Math.round(
+    ((skillResult.matchRatio || 0) * 0.6 +
     (experienceRatio * 0.3) +
-    ((candidate.personalityScore / 100) * 0.1);
+    (candidatePersonality / 100) * 0.1) * 100
+  );
 
+  // ---------- EXPLANATION ----------
   let explanation = "";
 
   if (finalScore > 80) {
-    explanation = "Excellent match for this role.";
+    explanation = "Excellent match for this role!";
   } else if (finalScore > 60) {
     explanation = "Good fit with minor gaps.";
-  } else {
+  } else if (finalScore > 40) {
     explanation = "Needs improvement in required skills.";
+  } else {
+    explanation = "Significant skill gap identified.";
   }
 
-  return {
-    skillMatchCount: skillResult.matchCount,
-    skillMatchPercent: Math.round(skillResult.matchRatio * 100),
+  const result = {
+    skillMatchCount: skillResult.matchCount || 0,
+    skillMatchPercent: Math.round((skillResult.matchRatio || 0) * 100),
     skillScore: Math.round(skillScore),
     experienceScore: Math.round(experienceScore),
     personalityScore: Math.round(personalityScore),
     finalScore: Math.round(finalScore),
-    confidenceIndex: Math.round(confidenceIndex * 100),
+    confidenceIndex: confidenceIndex,
     explanation
   };
+
+  console.log("Fit score result:", result);
+
+  return result;
 };

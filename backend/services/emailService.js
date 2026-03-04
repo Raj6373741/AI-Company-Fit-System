@@ -90,6 +90,7 @@ async function sendInterviewInvitation(candidateEmail, candidateName, jobTitle, 
 }
 
 module.exports = {
+    sendEmail,
     sendApplicationConfirmation,
     sendHRNotification,
     sendInterviewInvitation

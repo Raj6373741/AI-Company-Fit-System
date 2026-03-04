@@ -5,7 +5,7 @@ const connectDB = require("./config/db");
 const session = require("express-session");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
-const path = require("path");
+const authRoutes = require("./routes/authRoutes");
 const LoginLog = require("./models/LoginLog");
 const { requireLogin, requireRole } = require("./middleware/sessionAuth");
 const Candidate = require("./models/Candidate");
@@ -17,6 +17,9 @@ const app = express();
 const Application = require("./models/Application");
 const User = require("./models/User");
 const mongoose = require("mongoose");
+const { error } = require("console");
+const path = require("path");
+const extractResumeText = require("./utils/resumeParser");
 
 // --------
 //------------
@@ -79,6 +82,8 @@ app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   next();
 });
+
+app.use('/', authRoutes);
 
 // --------------------
 // ROOT ROUTE (AUTO REDIRECT)
@@ -457,6 +462,8 @@ app.get("/candidate/dashboard", requireLogin, requireRole("candidate"), async (r
   // Get query parameters
   const applied = req.query.applied || null;
 
+  const error = req.query.error || null;
+
   console.log("Candidate data:", candidate); // Debug
 
   res.render("candidate-dashboard", {
@@ -464,11 +471,13 @@ app.get("/candidate/dashboard", requireLogin, requireRole("candidate"), async (r
     appliedJobs,
     applied,
     candidate: candidate || { name: 'Candidate', skills: [], experience: 0, personalityScore: 50 }, // 👈 FIX: candidate pass karo
-    user: req.session.user
+    user: req.session.user,
+    error
   });
 
 });
 
+// APPLY FOR JOB - with better error handling
 app.post("/candidate/apply/:jobId",
   requireLogin,
   requireRole("candidate"),
@@ -477,71 +486,115 @@ app.post("/candidate/apply/:jobId",
     try {
 
       const jobId = req.params.jobId;
+      console.log("🚀 Apply route hit for job:", jobId);
 
+      // Find candidate with error handling
       const candidate = await Candidate.findOne({
         userId: new mongoose.Types.ObjectId(req.session.user.id)
       });
 
-      const job = await Job.findById(jobId);
-      const user = await User.findById(req.session.user.id);
+      if (!candidate) {
+        console.log("Candidate not found");
+        req.session.message = "Please complete your profile first";
+        return res.redirect("/candidate/profile");
+      }
 
-      if (!candidate || !job || !user) {
+      if (!candidate.resume) {
+        return res.redirect("/candidate/dashboard?error=noresume");
+      }
+
+      // Find job
+      const job = await Job.findById(jobId);
+      if (!job) {
+        console.log("Job not found");
+        req.session.message = "Job not found";
         return res.redirect("/candidate/dashboard");
       }
 
-      // 🔍 Debug
-      console.log("Candidate Name:", candidate.name);
-      console.log("User Email:", user.email);
+      // Find user
+      const user = await User.findById(req.session.user.id);
+      if (!user) {
+        console.log("User not found");
+        return res.redirect("/logout");
+      }
 
-      // Prevent duplicate apply
+      console.log("Candidate found:", candidate.name);
+      console.log("Job found:", job.title);
+
+      // Check duplicate application
       const existing = await Application.findOne({
         candidate: candidate._id,
-        job: jobId
+        job: jobId  
       });
 
       if (existing) {
+        console.log("Already applied");
         return res.redirect("/candidate/dashboard?applied=already");
       }
 
-      const evaluation = calculateFitScore(candidate, job);
+      // Calculate fit score
+      console.log("Calculating fit score...");
 
-      // ✅ SAFE SNAPSHOT SAVE
-      await Application.create({
+      // Extract resume text
+      const resumePath = path.join(__dirname, "uploads", candidate.resume);
+      
+      const resumeText = await extractResumeText(resumePath);
+
+      console.log("Resume Path:", resumePath);
+      console.log("Resume Text Sample:", resumeText.substring(0,200));
+
+      const evaluation = calculateFitScore(candidate, job, resumeText);
+
+      console.log("Fit score calculated:", evaluation);
+
+      const applicationData = {
         candidate: candidate._id,
         job: jobId,
-
-        // ✅ Always real data save karo
         candidateName: candidate.name,
         candidateEmail: user.email,
         candidateSkills: candidate.skills,
         candidateExperience: candidate.experience,
         candidatePersonality: candidate.personalityScore,
         jobTitle: job.title,
+        evaluation: evaluation
+      };
 
-        evaluation
-      });
+      await Application.create(applicationData);
 
-      // 📧 Send email to candidate
-      if (user.email) {
-        sendApplicationConfirmation(user.email, candidate.name, job.title)
-          .catch(err => console.error("Candidate email error:", err));
-      }
+      console.log("Creating application with data:", applicationData);
+      
+      console.log("Application created successfully!");
 
-      // 📧 Send email to HR
-      const hrUsers = await User.find({ role: "hr" });
-
-      for (const hr of hrUsers) {
-        if (hr.email) {
-          sendHRNotification(hr.email, candidate.name, job.title)
-            .catch(err => console.error("HR email error:", err));
+      // Send emails (async - don't await)
+      try {
+        if (user.email) {
+          sendApplicationConfirmation(user.email, candidate.name, job.title)
+            .catch(err => console.log("Email send error:", err.message));
         }
+
+        // Notify HR
+        User.find({ role: "hr" }).then(hrUsers => {
+          hrUsers.forEach(hr => {
+            if (hr.email) {
+              sendHRNotification(hr.email, candidate.name, job.title)
+                .catch(err => console.log("HR email error:", err.message));
+            }
+          });
+        });
+      } catch (emailErr) {
+        console.log("Email error (non-blocking):", emailErr.message);
       }
 
+      console.log("Redirecting with success");
       res.redirect("/candidate/dashboard?applied=success");
 
     } catch (error) {
       console.error("Apply Route Error:", error);
-      res.status(500).send("Something went wrong while applying.");
+      console.error("Error stack:", error.stack);
+      
+      // Store error message in session
+      req.session.message = "Something went wrong: " + error.message;
+      res.redirect("/candidate/dashboard");
     }
 });
 
@@ -574,24 +627,26 @@ app.post("/candidate/profile/update",
     try {
 
       const { name, email, mobile, experience } = req.body;
-
       const userId = req.session.user.id;
 
-      // 🔥 1️⃣ Update USER model (name + email)
       await User.findByIdAndUpdate(userId, {
-        name: name,
-        email: email
+        name,
+        email
       });
 
-      // 🔥 2️⃣ Update CANDIDATE model (mobile + experience + name sync)
       await Candidate.findOneAndUpdate(
-        { userId: userId },
+        { userId: new mongoose.Types.ObjectId(userId) },
         {
-          name: name,              // keep name synced
-          mobile: mobile,
-          experience: experience
-        }
-      );
+          name,
+          mobile,
+          experience
+        },
+        { upsert: true, new: true }
+        );
+
+      // 🔥 UPDATE SESSION ALSO
+      req.session.user.name = name;
+      req.session.user.email = email;
 
       res.redirect("/candidate/profile");
 

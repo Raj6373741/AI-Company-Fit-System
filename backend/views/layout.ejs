@@ -17,7 +17,7 @@
             </div>
             
             <nav class="sidebar-nav">
-                <% if (user?.role === "hr") { %>
+                <% if (user && user.role === "hr") { %>
                     <a href="/hr/dashboard" class="nav-item <%= currentPage === 'dashboard' ? 'active' : '' %>">
                         <span class="nav-icon">📊</span>
                         Dashboard
@@ -30,7 +30,7 @@
                         <span class="nav-icon">🚪</span>
                         Logout
                     </a>
-                <% } else if (user?.role === "candidate") { %>
+                <% } else if (user && user.role === "candidate") { %>
                     <a href="/candidate/dashboard" class="nav-item <%= currentPage === 'dashboard' ? 'active' : '' %>">
                         <span class="nav-icon">📊</span>
                         Dashboard
@@ -54,7 +54,7 @@
                     <h1><%= typeof title !== "undefined" ? title : "Dashboard" %></h1>
                 </div>
                 <div class="user-info">
-                    <span class="user-role"><%= user?.role === 'hr' ? 'HR' : 'Candidate' %></span>
+                    <span class="user-role"><%= user && user.role === 'hr' ? 'HR' : 'Candidate' %></span>
                     <span class="user-name"><%= user?.name || '' %></span>
                 </div>
             </header>

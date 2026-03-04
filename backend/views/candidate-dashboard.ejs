@@ -1,7 +1,6 @@
 <%
 currentPage = 'dashboard';
 %>
-
 <% if (typeof applied !== 'undefined' && applied === 'success') { %>
     <div class="alert success">✅ Application submitted successfully! Check your email.</div>
 <% } else if (typeof applied !== 'undefined' && applied === 'already') { %>
@@ -287,3 +286,11 @@ currentPage = 'dashboard';
     border: 1px dashed #d2d2d7;
 }
 </style>
+
+<script>
+  console.log("ERROR VALUE:", "<%= error %>");
+
+  if ("<%= error %>" === "noresume") {
+    alert("Please upload resume before applying.");
+  }
+</script>

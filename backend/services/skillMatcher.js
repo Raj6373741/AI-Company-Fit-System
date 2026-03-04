@@ -1,46 +1,49 @@
-const skillMap = {
-  "reactjs": "react",
-  "react native": "react",
-  "node.js": "node",
-  "javascript": "js",
-  "js": "js",
-  "html5": "html",
-  "css3": "css",
-  "mongo": "mongodb"
-};
+// Skill matching utility
+exports.calculateSkillSimilarity = (candidateSkills, jobSkills) => {
+  try {
+    // Handle empty arrays
+    if (!candidateSkills || !jobSkills || jobSkills.length === 0) {
+      return { matchCount: 0, matchRatio: 0 };
+    }
 
-function normalizeSkill(skill) {
-  const lower = skill.toLowerCase().trim();
-  return skillMap[lower] || lower;
-}
+    // Normalize skills (lowercase, trim)
+    const normalizedCandidate = candidateSkills.map(s => 
+      String(s).toLowerCase().trim()
+    );
+    
+    const normalizedJob = jobSkills.map(s => 
+      String(s).toLowerCase().trim()
+    );
 
-function partialMatch(skillA, skillB) {
-  return skillA.includes(skillB) || skillB.includes(skillA);
-}
-
-function calculateSkillSimilarity(candidateSkills, jobSkills) {
-
-  const normalizedCandidate = candidateSkills.map(normalizeSkill);
-  const normalizedJob = jobSkills.map(normalizeSkill);
-
-  let matchCount = 0;
-
-  normalizedJob.forEach(jobSkill => {
-    normalizedCandidate.forEach(candidateSkill => {
-      if (partialMatch(candidateSkill, jobSkill)) {
-        matchCount++;
-      }
+    // Count matches
+    let matchCount = 0;
+    normalizedCandidate.forEach(cSkill => {
+      normalizedJob.forEach(jSkill => {
+        if (cSkill.includes(jSkill) || jSkill.includes(cSkill)) {
+          matchCount++;
+        }
+      });
     });
-  });
 
-  const matchRatio = matchCount / normalizedJob.length;
+    // Calculate ratio (avoid duplicates)
+    const uniqueMatches = new Set();
+    normalizedCandidate.forEach(cSkill => {
+      normalizedJob.forEach(jSkill => {
+        if (cSkill.includes(jSkill) || jSkill.includes(cSkill)) {
+          uniqueMatches.add(jSkill);
+        }
+      });
+    });
 
-  return {
-    matchCount,
-    matchRatio
-  };
-}
+    const matchRatio = uniqueMatches.size / normalizedJob.length;
 
-module.exports = {
-  calculateSkillSimilarity
+    return {
+      matchCount: uniqueMatches.size,
+      matchRatio: matchRatio || 0
+    };
+
+  } catch (error) {
+    console.error("Skill matcher error:", error);
+    return { matchCount: 0, matchRatio: 0 };
+  }
 };

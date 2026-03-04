@@ -1,26 +1,46 @@
-exports.calculateFitScore = (candidate, job) => {
+exports.calculateFitScore = (candidate, job, resumeText) => {
 
-  const totalRequiredSkills = job.requiredSkills.length;
-
-  const matchedSkills = candidate.skills.filter(skill =>
-    job.requiredSkills.includes(skill)
+  // 🔹 Required Skills lowercase
+  const requiredSkills = job.requiredSkills.map(skill =>
+    skill.toLowerCase()
   );
 
-  const skillMatchRatio = matchedSkills.length / totalRequiredSkills;
+  let matchedSkills = 0;
 
-  const skillScore = skillMatchRatio * job.skillWeight;
+  requiredSkills.forEach(skill => {
+    if (resumeText.includes(skill)) {
+      matchedSkills++;
+    }
+  });
 
+  // Skill Score (Max 40)
+  const skillPercent =
+    requiredSkills.length > 0
+      ? matchedSkills / requiredSkills.length
+      : 0;
+
+  const skillScore = skillPercent * 40;
+
+  // Experience Score (Max 30)
   const experienceRatio =
-    candidate.experience >= job.minExperience
-      ? 1
-      : candidate.experience / job.minExperience;
+    job.minExperience > 0
+      ? Math.min(candidate.experience / job.minExperience, 1)
+      : 1;
 
-  const experienceScore = experienceRatio * job.experienceWeight;
+  const experienceScore = experienceRatio * 30;
 
-  const personalityRatio = candidate.personalityScore / 100;
-  const personalityScore = personalityRatio * job.personalityWeight;
+  // Personality Score (Max 30)
+  const personalityScore =
+    (candidate.personalityScore / 100) * 30;
 
-  const totalScore = skillScore + experienceScore + personalityScore;
+  const finalScore =
+    skillScore + experienceScore + personalityScore;
 
-  return Math.round(totalScore);
+  return {
+    skillScore: Math.round(skillScore),
+    experienceScore: Math.round(experienceScore),
+    personalityScore: Math.round(personalityScore),
+    finalScore: Math.round(Math.min(finalScore, 100)),
+    confidenceIndex: Math.round(finalScore * 0.9)
+  };
 };
