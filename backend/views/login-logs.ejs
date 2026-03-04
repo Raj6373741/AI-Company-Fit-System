@@ -1,19 +1,54 @@
 <h2>Login Activity Logs</h2>
 
-<table>
-  <tr>
-    <th>Email</th>
-    <th>Role</th>
-    <th>IP Address</th>
-    <th>Login Time</th>
-  </tr>
+<table class="login-table">
 
-  <% logs.forEach(log => { %>
-    <tr>
-      <td><%= log.email %></td>
-      <td><%= log.role %></td>
-      <td><%= log.ipAddress %></td>
-      <td><%= log.loginTime.toLocaleString() %></td>
-    </tr>
-  <% }) %>
+<thead>
+<tr>
+<th>Email</th>
+<th>Role</th>
+<th>IP Address</th>
+<th>Login Time</th>
+</tr>
+</thead>
+
+<tbody>
+
+<% logs.forEach(log => { %>
+
+<tr>
+<td><%= log.email %></td>
+<td><%= log.role %></td>
+<td><%= log.ip === "::1" ? "Localhost" : log.ip %></td>
+<td><%= new Date(log.createdAt).toLocaleString() %></td>
+</tr>
+
+<% }) %>
+
+</tbody>
+
 </table>
+<style>
+  .login-table{
+width:100%;
+border-collapse:collapse;
+background:white;
+border-radius:20px;
+overflow:hidden;
+}
+
+.login-table th{
+background:#f5f5f7;
+padding:14px;
+text-align:left;
+font-weight:600;
+}
+
+.login-table td{
+padding:14px;
+border-bottom:1px solid #eee;
+}
+
+.login-table tr:hover{
+background:#fafafa;
+}
+</style>

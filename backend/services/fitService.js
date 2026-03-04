@@ -40,6 +40,11 @@ exports.calculateFitScore = (candidate, job, resumeText = "") => {
     jobSkills
   );
 
+  // detect missing skills
+  const missingSkills = jobSkills.filter(
+    skill => !combinedSkills.includes(skill.toLowerCase())
+  )
+
   // Weight configuration (fixed)
   const skillWeight = 0.5;
   const experienceWeight = 0.3;
@@ -89,6 +94,7 @@ exports.calculateFitScore = (candidate, job, resumeText = "") => {
     personalityScore: Math.round(personalityScore),
     finalScore: Math.round(finalScore),
     confidenceIndex: confidenceIndex,
+    missingSkills,
     explanation
   };
 

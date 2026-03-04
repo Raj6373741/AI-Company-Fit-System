@@ -20,6 +20,7 @@ const mongoose = require("mongoose");
 const { error } = require("console");
 const path = require("path");
 const extractResumeText = require("./utils/resumeParser");
+const { extractSkillsFromResume } = require("./utils/resumeParser");
 
 // --------
 //------------
@@ -133,7 +134,7 @@ app.get("/hr/logins",
   async (req, res) => {
 
     const logs = await LoginLog.find({})
-      .sort({ loginTime: -1 })
+      .sort({ createdAt: -1 })
       .limit(50);
 
     res.render("login-logs", {
@@ -537,12 +538,33 @@ app.post("/candidate/apply/:jobId",
 
       // Extract resume text
       const resumePath = path.join(__dirname, "uploads", candidate.resume);
-      
+
+      // Resume text extract
       const resumeText = await extractResumeText(resumePath);
 
       console.log("Resume Path:", resumePath);
       console.log("Resume Text Sample:", resumeText.substring(0,200));
 
+
+      // ---------- AI SKILL DETECTION ----------
+      const detectedSkills = extractSkillsFromResume(resumeText);
+
+      console.log("Detected Resume Skills:", detectedSkills);
+
+
+      // Merge candidate skills + resume skills
+      candidate.skills = [
+        ...(candidate.skills || []),
+        ...detectedSkills
+      ];
+
+      // Remove duplicates
+      candidate.skills = [...new Set(candidate.skills)];
+
+      console.log("Final Candidate Skills:", candidate.skills);
+
+
+      // Calculate fit score
       const evaluation = calculateFitScore(candidate, job, resumeText);
 
       console.log("Fit score calculated:", evaluation);

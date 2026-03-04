@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const LoginLog = require("../models/LoginLog");
 const User = require('../models/User');
 const Candidate = require('../models/Candidate');
 const { sendEmail } = require('../services/emailService');
@@ -98,6 +99,17 @@ router.post('/login', async (req, res) => {
             role: user.role,
             name: user.name
         };
+
+        const ip =
+        req.headers['x-forwarded-for'] ||
+        req.socket.remoteAddress ||
+        req.ip;
+
+        await LoginLog.create({
+            email: user.email,
+            role: user.role,
+            ip: ip
+        });
 
         res.redirect(user.role === 'hr' ? '/hr/dashboard' : '/candidate/dashboard');
 
